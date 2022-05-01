@@ -1,0 +1,29 @@
+module sixteen_bit_full_adder (
+    input x[16],
+    input y[16],
+    input op[6],
+    output s[16],
+    output z,
+    output v,
+    output n
+  ) {
+  sig temp[16];
+always {
+  if (op[0] == 0){
+    temp = x+y;
+  } else {
+    temp = x-y;
+  }
+    s= temp;
+    // flags z = all zeroes
+    if (temp == 0){
+      z = 1;
+      } else {
+      z = 0;
+      }    
+    // flags n is negative
+    n = temp[15];
+    // v overflow check
+    v = (x[15] & (y[15] ^ op[0]) & ~temp[15]) + (~x[15] & (~y[15] ^ op[0]) & temp[15]);
+  }
+}

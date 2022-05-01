@@ -1,0 +1,193 @@
+module test_mult (
+
+    input clk,
+    input rst,
+    input button,
+    
+    output out[16],
+    output done,
+    output start,
+    output error,
+    output checkoff[8]
+    
+  )
+
+
+{
+  sixteen_bit_multiplier mult;
+  .clk(clk){
+    edge_detector edge_detector(#RISE(1), #FALL(0));
+    .rst(rst){
+      fsm testMult = {START, MULT0, ERR, DONE, ERRCASE, MULTPP, MULTPN, MULTNN};
+      dff product[16];
+      dff checkoffflag[8];
+      dff doneflag;
+      dff errorflag;
+      dff startflag;
+      }
+    }
+  
+  const ZERO = 16h0000; // 0
+  
+  const POS1 = 16h0005; // 5
+  const POS2 = 16h0005; // 5
+  const MULTPP = 16h0019; // 25
+  
+  const NEG1 = 16hffff; // -1
+  const NEG2 = 16hfff0; // -16
+  const MULTNN = 16h0010; // 16
+  
+  const MULTPN = 16hfffb; // -5
+  
+  const ERR1 = 16h0006; // 6
+  const ERR2 = 16h0004; // 4
+  const ERR12 = 16h0018; // 24
+  
+  
+  
+  
+  always{
+  
+    out = product.q;
+    mult.x = 0;
+    mult.y = 0;
+    checkoff = checkoffflag.q; // check which state are we on
+    done = doneflag.q; // check if we are in pass state
+    error = errorflag.q; // check if we are in error state
+    start = startflag.q; // check if we are in start state
+    
+    edge_detector.in = button;
+    
+    
+    
+    case(testMult.q){
+    
+      
+      
+      testMult.START:
+        startflag.d = 1; // show that we are in start state
+        product.d = 16h8888;
+        out = product.q;
+        checkoffflag.d = 16h0000;
+        if (edge_detector.out == 1){
+          testMult.d = testMult.MULT0; // press button to proceed to mult0
+          }
+        
+        
+        
+        // test if multiplied with 0 will yield 0 (hex 0000)
+      testMult.MULT0:
+        mult.x = POS1;
+        mult.y = ZERO;
+        product.d = mult.p;
+        checkoffflag.d[7] = 1;
+        if (mult.p == ZERO){
+          out = product.q;
+          if (edge_detector.out == 1){
+            testMult.d = testMult.MULTPP; // press button to proceed to mult1
+            }
+          }
+        else{
+          testMult.d = testMult.ERR;
+          }
+        
+        
+        
+        
+        // test if positive x positive = positive (hex 0019)
+      testMult.MULTPP:
+        mult.x = POS1;
+        mult.y = POS2;
+        product.d = mult.p;
+        checkoffflag.d[6] = 1;
+        if (mult.p == MULTPP){
+          out = product.q;
+          if (edge_detector.out == 1){
+            testMult.d = testMult.MULTPN; // press button to proceed to multpn
+            }
+          }
+        else{
+          testMult.d = testMult.ERR;
+          }
+        
+        
+        
+        // test if positive x negative = positive (hex fffb)
+      testMult.MULTPN:
+        mult.x = POS1;
+        mult.y = NEG1;
+        product.d = mult.p;
+        checkoffflag.d[5] = 1;
+        if(mult.p == MULTPN){
+          out = product.q;
+          if(edge_detector.out == 1){
+            testMult.d = testMult.MULTNN; // press button to proceed to multnn
+            }
+          }
+        else{
+          testMult.d = testMult.ERR;
+          }
+        
+        
+        
+        // test if negative x negative = positive (hex 0010)
+      testMult.MULTNN:
+        mult.x = NEG1;
+        mult.y = NEG2;
+        product.d = mult.p;
+        checkoffflag.d[4] = 1;
+        if(mult.p == MULTNN){
+          out = product.q;
+          if (edge_detector.out == 1){
+            testMult.d = testMult.ERRCASE; // press button to proceed to errcase, to test err state
+            }
+          }
+        else{
+          testMult.d = testMult.ERR;
+          }
+        
+        
+        
+        // check if all tests are done
+      testMult.DONE:
+        doneflag.d = 1;
+        product.d = 16hc001;
+        out = product.q;  
+        checkoffflag.d = 8hff;
+        if(edge_detector.out == 1){
+          testMult.d = testMult.START;
+          }
+        
+        
+        
+        // error state, io_led to show we are in error state, check if error in errcase will bring us here
+      testMult.ERR:
+        errorflag.d = 1;
+        product.d = 16hdead;
+        out = product.q;
+        checkoffflag.d[2] = 1;
+        if (edge_detector.out == 1){
+            testMult.d = testMult.DONE; // press button to proceed to done state
+          }
+        
+        
+        
+        // press button to jump to error state, check if error state is working
+      testMult.ERRCASE:
+        mult.x = ERR1;
+        mult.y = ERR2;
+        product.d = 16hdead;
+        checkoffflag.d[3] = 1;
+        if (mult.p == ERR12){
+          out = product.q;
+          if(edge_detector.out == 1){
+            testMult.d = testMult.ERR;
+          }
+        }
+        else{
+          out = product.q;
+          testMult.d = testMult.DONE;
+        }
+      }
+    }
+  }

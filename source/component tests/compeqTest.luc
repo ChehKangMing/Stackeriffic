@@ -1,0 +1,210 @@
+module compeqTest (
+    input clk,  // clock
+    input rst,  // reset
+    
+    input button,
+    input endbutton,
+    
+    output checkoff[8],
+    output error[1],
+    output result[16],
+    output out
+  ) {
+  
+  .clk(clk) {
+    edge_detector edge_detector(#RISE(1), #FALL(0));
+    edge_detector end_detector(#RISE(1), #FALL(0));
+    .rst(rst) {
+      fsm testCase = {START, PPEQ, PPNE, NNEQ, NNNE, PNNE, NPNE, ERR, END, ERROR};
+      dff checkoff_reg[8](#INIT(0), .clk(clk), .rst(rst));
+      dff error_reg[1](#INIT(0), .clk(clk), .rst(rst));
+      dff result_out[16](#INIT(0), .clk(clk), .rst(rst));
+      comp compeq;
+    }
+  }
+  
+  // Test Cases
+  const PPEQA = 16b0110100101101010;
+  const PPEQB = 16b0110100101101010;
+  
+  const PPNEA = 16b0101100101100110;
+  const PPNEB = 16b0101100111100110;
+  
+  const NNEQA = 16b1101001001101010;
+  const NNEQB = 16b1101001001101010;
+  
+  const NNNEA = 16b1001011001011101;
+  const NNNEB = 16b1001011101011101;
+  
+  const PNNEA = 16b0100011001010010;
+  const PNNEB = 16b1100011001010010;
+  
+  const NPNEA = 16b1000001101011010;
+  const NPNEB = 16b0000001101011010;
+  
+  const ERRA = 16b1010101010101010;
+  const ERRB = 16b1010101010101010;
+  
+  
+  // Expected Results
+  const PPEQ = 1b1;
+  const PPNE = 1b0;
+  const NNEQ = 1b1;
+  const NNNE = 1b0;
+  const PNNE = 1b0;
+  const NPNE = 1b0;
+  const ERR = 1b0;
+ 
+ 
+  always {
+    out = 0;
+    checkoff = checkoff_reg.q;
+    error = error_reg.q;
+    result = result_out.q;
+    
+    compeq.a = 0;
+    compeq.b = 0;
+    compeq.op = 6b000010;
+    
+    edge_detector.in = button;
+    end_detector.in = endbutton;
+    
+    case (testCase.q) {
+      testCase.START:
+        error = 1h00;
+        checkoff = 8h00;
+        result = 16h00;
+        error_reg.d = 1h0;
+        checkoff_reg.d = 8h0000;
+        result_out.d = 16h0000;
+        if (edge_detector.out == 1) {
+          testCase.d = testCase.PPEQ;
+        }
+        
+      testCase.PPEQ:
+        compeq.a = PPEQA;
+        compeq.b = PPEQB;
+        checkoff_reg.d[7] = 1;
+        error_reg.d = (compeq.out != PPEQ);
+        result_out.d = compeq.out;
+        if (compeq.out == PPEQ) {
+          if (edge_detector.out == 1) {
+            testCase.d = testCase.PPNE;
+          }
+        }
+        else {
+          testCase.d = testCase.ERROR;
+        }
+        
+      testCase.PPNE:
+        compeq.a = PPNEA;
+        compeq.b = PPNEB;
+        checkoff_reg.d[6] = 1;
+        error_reg.d = (compeq.out != PPNE);
+        result_out.d = compeq.out;
+        if (compeq.out == PPNE) {
+          if (edge_detector.out == 1) {
+            testCase.d = testCase.NNEQ;
+          }
+        }
+        else {
+          testCase.d = testCase.ERROR;
+        }
+        
+        testCase.NNEQ:
+        compeq.a = NNEQA;
+        compeq.b = NNEQB;
+        checkoff_reg.d[5] = 1;
+        error_reg.d = (compeq.out != NNEQ);
+        result_out.d = compeq.out;
+        if (compeq.out == NNEQ) {
+          if (edge_detector.out == 1) {
+            testCase.d = testCase.NNNE;
+          }
+        }
+        else {
+          testCase.d = testCase.ERROR;
+        }
+        
+        testCase.NNNE:
+        compeq.a = NNNEA;
+        compeq.b = NNNEB;
+        checkoff_reg.d[4] = 1;
+        error_reg.d = (compeq.out != NNNE);
+        result_out.d = compeq.out;
+        if (compeq.out == NNNE) {
+          if (edge_detector.out == 1) {
+            testCase.d = testCase.PNNE;
+          }
+        }
+        else {
+          testCase.d = testCase.ERROR;
+        }
+        
+        testCase.PNNE:
+        compeq.a = PNNEA;
+        compeq.b = PNNEB;
+        checkoff_reg.d[4] = 1;
+        error_reg.d = (compeq.out != PNNE);
+        result_out.d = compeq.out;
+        if (compeq.out == PNNE) {
+          if (edge_detector.out == 1) {
+            testCase.d = testCase.NPNE;
+          }
+        }
+        else {
+          testCase.d = testCase.ERROR;
+        }
+        
+        testCase.NPNE:
+        compeq.a = NPNEA;
+        compeq.b = NPNEB;
+        checkoff_reg.d[4] = 1;
+        error_reg.d = (compeq.out != NPNE);
+        result_out.d = compeq.out;
+        if (compeq.out == NPNE) {
+          if (edge_detector.out == 1) {
+            testCase.d = testCase.ERR;
+          }
+        }
+        else {
+          testCase.d = testCase.ERROR;
+        }
+        
+        testCase.ERR:
+        compeq.a = ERRA;
+        compeq.b = ERRB;
+        checkoff_reg.d[4] = 1;
+        error_reg.d = (compeq.out != ERR);
+        result_out.d = compeq.out;
+        if (compeq.out == ERR) {
+          if (edge_detector.out == 1) {
+            testCase.d = testCase.END;
+          }
+        }
+        else {
+          testCase.d = testCase.ERROR;
+        }
+        
+        testCase.ERROR:
+          if (edge_detector.out ==1) {
+            testCase.d = testCase.START;
+          } 
+          else if (end_detector.out ==1) {
+            testCase.d = testCase.END;
+          }
+        
+        testCase.END:
+          error_reg.d = 8hff;
+          checkoff_reg.d = 8hff;
+          result_out.d =16hc001;
+          result = result_out.q;
+          error = error_reg.q;
+          checkoff = checkoff_reg.q;
+          if (edge_detector.out ==1){
+            testCase.d = testCase.START;
+          }    
+
+    }
+}
+   

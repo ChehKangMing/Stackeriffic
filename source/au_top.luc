@@ -1,0 +1,135 @@
+module au_top (
+    input clk,              // 100MHz clock
+    input rst_n,
+    input reset,            // reset button (active low)
+    output led [8],         // 8 user controllable LEDs
+    input usb_rx,           // USB->Serial input
+    output usb_tx,          // USB->Serial output
+    output io_led [3][8],   // LEDs on IO Shield
+    output io_seg [8],      // 7-segment LEDs on IO Shield
+    output io_sel [4],      // Digit select on IO Shield
+    input io_button [5],    // 5 buttons on IO Shield
+    //   0
+    // 3 1 4
+    //   2
+    input playerin,
+    input io_dip [3][8],    // DIP switches on IO Shield
+    //output zvns[4]
+    output outgnd[8],
+    output outled[8]    
+  ) {
+      sig rst;   
+    // declare modules
+   .clk(clk) {
+
+    // The reset conditioner is used to synchronize the reset signal to the FPGA
+    // clock. This ensures the entire FPGA comes out of reset at the same time.
+    reset_conditioner reset_cond;
+    // this module checks if we are pressing any of the 5 io buttons
+    //button_conditioner buttoncond[5];
+    .rst(rst){
+      // register for value to print to segment
+        //dff store_s[16](#INIT(0),.clk(clk), .rst(rst)); 
+        //dff store_zvn[3](#INIT(0),.clk(clk), .rst(rst));
+        //dff store_s_wrong[1](#INIT(0),.clk(clk), .rst(rst));
+      
+        dff gamestate[16];
+        //dff gameposition[16];
+        //dff positionl1[8];
+        //dff positionl2[8];
+        //dff statedebugdff[8];
+      // declare our module to address the segment         
+      multi_seven_seg seg;
+      // declare our test module
+      //regfile_tester regiletest;
+      //game_beta beta;
+      cu_test cu_test;
+    }
+    
+    edge_detector buttondetect(#RISE(1), #FALL(0));
+    edge_detector debugdetect(#RISE(1),#FALL(0));
+    button_conditioner btn_cond;
+    button_conditioner debug_cond;
+  }
+
+  always {
+    reset_cond.in = ~rst_n; //inverted rst_n
+    reset_cond.in = reset;  // normal reset signal for black button
+    rst = reset_cond.out;   // conditioned reset
+    usb_tx = usb_rx;        // loop serial port
+    
+    led = 8h00;             // turn LEDs off
+    io_led = 3x{{8h00}};    // turn io LEDs off 
+    
+    //screen
+    outgnd = cu_test.outledlow;
+    outled = cu_test.outledhigh;
+    
+    // connect buttons
+    debug_cond.in = io_button[1];      
+    cu_test.speedSel = io_dip[2][7:5];
+    debugdetect.in = debug_cond.out;
+    cu_test.updateSpeed = debugdetect.out;
+    io_led[2][7] = debugdetect.out;
+    io_led[2][4:0] = cu_test.readSpead;
+    
+    // john cu test ************************************************************************
+    btn_cond.in = playerin;
+    buttondetect.in = btn_cond.out;
+    cu_test.button = buttondetect.out;
+    gamestate.d = cu_test.out;
+    cu_test.selector = io_dip[0]; // we are using the right bank dips
+    io_led[1][7:0] = cu_test.state_number[7:0]; 
+    
+    // end john cu test ***********************************************************************
+    
+    
+    // new test connect buttons
+    //btn_cond.in = io_button[0];
+    //buttondetect.in = btn_cond.out;
+    //beta.button = buttondetect.out;
+    //gameposition.d = beta.positionl1;
+    //gamestate.d = beta.reg_eleven;
+    
+    //io_led[0][7:0] = gameposition.q[7:0];
+    //io_led[1][7:0] = gameposition.q[15:8];
+    
+    // old test **********************************************
+    //positionl1.d = gamebeta.positionl1;
+    //positionl2.d = gamebeta.positionl2;
+    //statedebugdff.d = gamebeta.statedebug;
+    
+    //io_led[0] = positionl1.q;
+    //io_led[1] = positionl2.q;
+    
+    //io_led[2] = statedebugdff.q;
+    
+    
+    //regiletest.we = io_dip[0][0];
+    //regiletest.data[15:8] = io_dip[2][7:0];
+    //regiletest.data[7:0] = io_dip[1][7:0];
+    
+    //regiletest.we = 1;
+    //regiletest.read_address_b = 0;
+    //regiletest.write_address = 0;
+    //regiletest.data = 1;
+    
+    //regiletest.read_address_a = io_dip[0][3:0];
+    //io_led[2][7:0] = regiletest.out_a[15:8];
+    //io_led[1][7:0] = regiletest.out_a[7:0];
+    // end old test ********************************************
+    
+    // new test *************************************************
+    
+    // end new test *********************************************
+
+ 
+    
+
+    // connect s output to segment's values
+    //seg.values = {4he,4hf,4hc,4hd};
+    seg.values = {gamestate.q[15:12],gamestate.q[11:8],gamestate.q[7:4],gamestate.q[3:0]};
+    io_seg = ~seg.seg;          //  select needed segments, we do bitwise inversion as 0 indicates selected segment
+    io_sel = ~seg.sel;           // select all needed digits  
+  }
+}

@@ -1,0 +1,114 @@
+module game_miniRegfiles (
+    input clk,  // clock
+    input rst,  // reset
+    input write_address[4], // write address
+    input we, // write enable
+    input data[16], // data in
+    input read_address_a[4], //address port a 
+    input read_address_b[4], //address port b
+    output out_a[16], //read port a
+    output out_b[16], //read port b
+    
+    //screen
+    output r1_out[16],
+    output r2_out[16],
+    output r3_out[16],
+    output r4_out[16],
+    output r5_out[16],
+    output r6_out[16],
+    output r7_out[16],
+    output r8_out[16],
+    
+    //debug
+    output reg11_current_line_index[16], // current line we at
+    output reg0_speed_frame_count[16], // r0 is the speed, it counts up when we finish one frame
+    output reg9_and_computation[16] // and computation result when player press button
+
+  ) 
+
+{
+
+  .clk(clk){
+    .rst(rst){
+      dff gamestate_r0[16](#INIT(0),.clk(clk), .rst(rst));
+      dff line1_r1[16](#INIT(16b00111100),.clk(clk), .rst(rst));
+      dff line2_r2[16](#INIT(16b01111110),.clk(clk), .rst(rst));
+      dff line3_r3[16](#INIT(16b01011110),.clk(clk), .rst(rst));
+      dff line4_r4[16](#INIT(16b11011111),.clk(clk), .rst(rst));
+      dff line5_r5[16](#INIT(16b11010110),.clk(clk), .rst(rst));
+      dff line6_r6[16](#INIT(16b00011111),.clk(clk), .rst(rst));
+      dff line7_r7[16](#INIT(16b00110001),.clk(clk), .rst(rst));
+      dff line8_r8[16](#INIT(16b01100011),.clk(clk), .rst(rst));
+      dff and_result_r9[16](#INIT(0),.clk(clk), .rst(rst));
+      dff current_line_r11[16](#INIT(0),.clk(clk), .rst(rst));
+    }
+  }
+
+  always {
+    //screen port
+    r1_out = line1_r1.q[7:0];
+    r2_out = line2_r2.q[7:0];
+    r3_out = line3_r3.q[7:0];
+    r4_out = line4_r4.q[7:0];
+    r5_out = line5_r5.q[7:0];
+    r6_out = line6_r6.q[7:0];
+    r7_out =line7_r7.q[7:0];
+    r8_out = line8_r8.q[7:0];
+
+    //write port
+    if (we){
+      case(write_address){
+        b0000 : gamestate_r0.d = data;
+        b0001 : line1_r1.d = data;
+        b0010 : line2_r2.d = data;
+        b0011 : line3_r3.d = data;
+        b0100 : line4_r4.d = data;
+        b0101 : line5_r5.d = data;
+        b0110 : line6_r6.d = data;
+        b0111 : line7_r7.d = data;
+        b1000 : line8_r8.d = data;
+        b1001 : and_result_r9.d = data;
+        b1011 : current_line_r11.d = data;
+      }
+    }
+    
+      
+    //read port a
+    case(read_address_a){
+      b0000 : out_a = gamestate_r0.q;
+      b0001 : out_a = line1_r1.q;
+      b0010 : out_a = line2_r2.q;
+      b0011 : out_a = line3_r3.q;
+      b0100 : out_a = line4_r4.q;
+      b0101 : out_a = line5_r5.q;
+      b0110 : out_a = line6_r6.q;
+      b0111 : out_a = line7_r7.q;
+      b1000 : out_a = line8_r8.q;
+      b1001 : out_a = and_result_r9.q;
+      b1011 : out_a = current_line_r11.q;
+      default : out_a = 0;
+      
+    }
+    
+    //read port b
+    case(read_address_b){
+      b0000 : out_b = gamestate_r0.q;
+      b0001 : out_b = line1_r1.q;
+      b0010 : out_b = line2_r2.q;
+      b0011 : out_b = line3_r3.q;
+      b0100 : out_b = line4_r4.q;
+      b0101 : out_b = line5_r5.q;
+      b0110 : out_b = line6_r6.q;
+      b0111 : out_b = line7_r7.q;
+      b1000 : out_b = line8_r8.q;
+      b1001 : out_b = and_result_r9.q;
+      b1011 : out_b = current_line_r11.q;
+      default : out_b = 0;
+    }
+     
+    //For debugging
+    reg0_speed_frame_count = gamestate_r0.q;
+    reg9_and_computation = and_result_r9.q;
+    reg11_current_line_index = current_line_r11.q;
+  }
+}

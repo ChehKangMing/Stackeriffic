@@ -1,0 +1,42 @@
+module regfile_tester (
+    input clk,  // clock
+    input rst,  // reset
+    input data[16],
+    input write_address[4],
+    input read_address_a[4],
+    input read_address_b[4],
+    input we,
+    output out_a[16],
+    output out_b[16],
+    //screen
+    output r1_out[16],
+    output r2_out[16],
+    output r3_out[16],
+    output r4_out[16],
+    output r5_out[16],
+    output r6_out[16],
+    output r7_out[16],
+    output r8_out[16]
+  ) {
+  game_miniRegfiles regfile(.clk(clk),.rst(rst));
+  
+  always {
+    out_a = regfile.out_a;
+    out_b = regfile.out_b;
+    //screenconnections
+    r1_out = regfile.r1_out;
+    r2_out = regfile.r2_out;
+    r3_out = regfile.r3_out;
+    r4_out = regfile.r4_out;
+    r5_out = regfile.r5_out;
+    r6_out = regfile.r6_out;
+    r7_out = regfile.r7_out;
+    r8_out = regfile.r8_out;
+    regfile.read_address_a = read_address_a;
+    regfile.read_address_b = read_address_b;
+    regfile.we = we;
+    regfile.write_address = write_address;
+    regfile.data = data;
+    
+  }
+}

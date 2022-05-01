@@ -1,0 +1,75 @@
+module matrix_writer (
+    input clk,  // clock
+    input rst,  // reset
+    input row[8][8],    
+    output outled[8],
+    output outgnd[8],
+    output clkout
+  ) {
+  const CLOCKSIZE = $clog2(100);  
+  counter slowClock(#SIZE(CLOCKSIZE),.clk(clk),.rst(rst));      
+  edge_detector slowclk_detector(#RISE(1), #FALL(0),.clk(clk));
+  fsm row_case(#INIT(ROW0), .clk(clk), .rst(rst)) = {
+        ROW0, ROW1, ROW2, ROW3, ROW4, ROW5, ROW6, ROW7}; 
+        
+always {
+    outled = b11111111;
+    outgnd = b00000000;
+    
+   
+    
+    clkout = slowclk_detector.out;
+    slowclk_detector.in = slowClock.value[CLOCKSIZE-1];
+    
+    case(row_case.q){
+      row_case.ROW0:
+      outgnd = ~8b10000000;
+      outled = row[0][7:0];
+      if (slowclk_detector.out == 1){
+        row_case.d = row_case.ROW1;
+      }
+      row_case.ROW1:
+      outgnd = ~8b01000000;
+      outled = row[1][7:0];
+      if (slowclk_detector.out == 1){
+        row_case.d = row_case.ROW2;
+      }
+      row_case.ROW2:
+      outgnd = ~8b00100000;
+      outled = row[2][7:0];
+      if (slowclk_detector.out == 1){
+        row_case.d = row_case.ROW3;
+      }        
+      row_case.ROW3:
+      outgnd = ~8b00010000;
+      outled = row[3][7:0];
+      if (slowclk_detector.out == 1){
+        row_case.d = row_case.ROW4;
+      }        
+      row_case.ROW4:
+      outgnd = ~8b00001000;
+      outled = row[4][7:0];
+      if (slowclk_detector.out == 1){
+        row_case.d = row_case.ROW5;
+      }        
+      row_case.ROW5:
+      outgnd = ~8b00000100;
+      outled = row[5][7:0];
+      if (slowclk_detector.out == 1){
+        row_case.d = row_case.ROW6;
+      }        
+      row_case.ROW6:
+      outgnd = ~8b00000010;
+      outled = row[6][7:0];
+      if (slowclk_detector.out == 1){
+        row_case.d = row_case.ROW7;
+      }        
+      row_case.ROW7:
+      outgnd = ~8b00000001;
+      outled = row[7][7:0];
+      if (slowclk_detector.out == 1){
+        row_case.d = row_case.ROW0;
+      }        
+                
+  }
+}

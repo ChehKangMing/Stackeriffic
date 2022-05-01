@@ -1,0 +1,76 @@
+module alu (
+    input x[16],
+    input y[16],
+    input op[6],
+    output s[16],
+    output zvn[3]
+  ) {
+  
+  adder adderUnit;
+  boolean booleanUnit;
+  shifter shifterUnit;
+  compare compareUnit; 
+  sixteen_bit_multiplier multUnit;
+  sig alufn_signal[6];
+  sig a[16];
+  sig b[16]; 
+  sig z;
+  sig v;
+  sig n;
+  
+  
+  always {
+    
+    a = x;
+    b = y;
+    alufn_signal = op;
+    
+    adderUnit.alufn_signal = alufn_signal;
+    adderUnit.a = a;
+    adderUnit.b = b;
+    
+    z = adderUnit.z;
+    v = adderUnit.v;
+    n = adderUnit.n; 
+    
+    zvn[0] = z;
+    zvn[1] = v;
+    zvn[2] = n;
+     
+    
+    compareUnit.alufn_signal = alufn_signal;
+    compareUnit.z = z;
+    compareUnit.v = v;
+    compareUnit.n = n;
+    
+    booleanUnit.alufn_signal = alufn_signal;
+    booleanUnit.a = a;
+    booleanUnit.b = b;
+    
+    shifterUnit.alufn_signal = alufn_signal;
+    shifterUnit.a = a;
+    shifterUnit.b = b[3:0];
+    
+    multUnit.x = a;
+    multUnit.y = b;
+    
+    case(op){
+      b000000 : s= adderUnit.out;
+      b000001: s= adderUnit.out;
+      b011000 : s= booleanUnit.out;
+      b001110 : s= booleanUnit.out;
+      b000110 : s= booleanUnit.out;
+      b011010 : s= booleanUnit.out;
+      b100000 : s= shifterUnit.out;
+      b100001 : s= shifterUnit.out;
+      b100011 : s= shifterUnit.out;
+      b000010 : s= multUnit.p;
+      b110011 : s= compareUnit.out;
+      b110101 : s= compareUnit.out;
+      b110111 : s= compareUnit.out;
+      default : s= 16hdead;
+  }
+    
+    
+  }
+}

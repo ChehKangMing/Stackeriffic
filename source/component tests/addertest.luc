@@ -1,0 +1,254 @@
+module adderTest (
+    input clk,  // clock
+    input rst,  // reset
+    input button,
+    output checkoff[8], // is current correct????
+    output flag[4], // output the flags for this error
+    output s[16] // output of sum value, 
+   ) {
+      // declare modules and constants 
+      sixteen_bit_full_adder fa;
+    .clk(clk) {
+      // this is sync our button presses with the clk signal.
+      // without it we have metastability issues
+      edge_detector edge_detector(#RISE(1), #FALL(0));
+      .rst(rst) {
+        // register to show which test case we are on. 
+        // lit nth bit starting from the left, means we are currently at nth case
+        // output to the right bakn of leds
+        dff checkoff_reg[8](#INIT(0), .clk(clk), .rst(rst));
+        // error state left bit to right bit
+        // z v n s
+        // output to the middle bank of leds,
+        dff flag_reg[4](#INIT(0), .clk(clk), .rst(rst));
+        // error s 
+        dff s_reg[16](#INIT(0), .clk(clk), .rst(rst));
+        // we move to the next state by pressing the centre io button
+        // in each state we do the calculation and then print the result to the segment display
+        // when catching a error, i.e the err state, we go immediately to error state
+        // in error state we can return to start state by pressing centre io button
+        // in error state, print the error state z v n s values that are wrong in the the middle led bank
+        // pressing the left button jumps to end state so we can demonstrate how 
+        fsm testCase(#INIT(START), .clk(clk), .rst(rst)) = {START,PPP,PNN,P00,PPV,ERR,END,ERROR_STATE};
+      }
+    }
+    // from left to the right of second bank of ioled
+    // z v n s
+    // constants test conditions
+    // PPP
+    const PPP_X = 16h5e94;    
+    const PPP_ALUFN = b000000;
+    const PPP_Y = 16h132f;    
+    const PPP_S = 16h71c3;    
+    const PPP_Z = 0;
+    const PPP_V = 0;
+    const PPP_N = 0;
+
+
+    // PNN
+    const PNN_X = 16h000f;     
+    const PNN_ALUFN = b000000;
+    const PNN_Y = 16hffec;    
+    const PNN_S = 16hfffb;    
+    const PNN_Z = 0;
+    const PNN_V = 0;
+    const PNN_N = 1;
+
+
+    // P00
+    const P00_X = 0;
+    const P00_ALUFN = b000000;
+    const P00_Y = 0;
+    const P00_S = 0;
+    const P00_Z = 1;
+    const P00_V = 0;
+    const P00_N = 0;
+
+
+    // PPV
+    const PPV_X = 16h0001;    
+    const PPV_ALUFN = b000000;
+    const PPV_Y = 16h7FFF;    
+    const PPV_S = 16h8000;    
+    const PPV_Z = 0;
+    const PPV_V = 1;
+    const PPV_N = 1;
+
+
+    // ERR
+    const ERR_X = 16h0001;
+    const ERR_ALUFN = b000000;
+    const ERR_Y = 16h0001;
+    const ERR_S = 16h0002;
+    const ERR_Z = 1;
+    const ERR_V = 1;
+    const ERR_N = 1;
+   
+    
+
+ always {
+    // q is out and d is input for dff 
+    // default outputs
+    checkoff = checkoff_reg.q;
+    flag = flag_reg.q;
+    s = s_reg.q;
+
+    // default inputs
+    fa.x = 0;
+    fa.y = 0; 
+    fa.op = 0;
+    
+    // edge_detector is checking if we pressed button
+    edge_detector.in = button;
+
+
+    //declare fsm
+    case (testCase.q) {
+        testCase.START:
+        flag_reg.d = 8h00;
+        // we want to print something to show that we are in the correct component
+        s_reg.d = 16hadd0;
+        checkoff_reg.d = 16h0000;
+        // edge_detector sees we have pressed the button
+        if (edge_detector.out == 1) {
+          testCase.d = testCase.PPP;
+        }
+        // PPP
+        testCase.PPP:
+        fa.x = PPP_X;
+        fa.y = PPP_Y;
+        fa.op = PPP_ALUFN;
+        //turn on io_led to indicate which case we are on
+        checkoff_reg.d[7] = 1;
+        //wait for the timer
+        // check values
+        flag_reg.d[3] = (fa.z != PPP_Z);
+        flag_reg.d[2] = (fa.v != PPP_V);
+        flag_reg.d[1] = (fa.n != PPP_N);
+        flag_reg.d[0] = (fa.s != PPP_S);
+        s_reg.d = fa.s;
+        if (fa.s == PPP_S & fa.z == PPP_Z & fa.n == PPP_N & fa.v == PPP_V){
+            if (edge_detector.out == 1) {
+                testCase.d = testCase.PNN;
+            }
+            } else {
+                testCase.d = testCase.ERROR_STATE;
+        }
+
+
+        // PNN
+        testCase.PNN:
+        fa.x = PNN_X;
+        fa.y = PNN_Y;
+        fa.op = PNN_ALUFN;
+        //turn on io_led to indicate which case we are on
+        checkoff_reg.d[6] = 1;
+        //wait for the timer
+        // check values
+        flag_reg.d[3] = (fa.z != PNN_Z);
+        flag_reg.d[2] = (fa.v != PNN_V);
+        flag_reg.d[1] = (fa.n != PNN_N);
+        flag_reg.d[0] = (fa.s != PNN_S);
+        s_reg.d = fa.s;
+        if (fa.s == PNN_S & fa.z == PNN_Z & fa.n == PNN_N & fa.v == PNN_V){
+            if (edge_detector.out == 1) {
+                testCase.d = testCase.P00;
+            }
+            } else {
+                testCase.d = testCase.ERROR_STATE;
+        }
+
+
+        // P00
+        testCase.P00:
+        fa.x = P00_X;
+        fa.y = P00_Y;
+        fa.op = P00_ALUFN;
+        //turn on io_led to indicate which case we are on
+        checkoff_reg.d[5] = 1;
+        //wait for the timer
+        // check values
+        flag_reg.d[3] = (fa.z != P00_Z);
+        flag_reg.d[2] = (fa.v != P00_V);
+        flag_reg.d[1] = (fa.n != P00_N);
+        flag_reg.d[0] = (fa.s != P00_S);
+        s_reg.d = fa.s;
+        if (fa.s == P00_S & fa.z == P00_Z & fa.n == P00_N & fa.v == P00_V){
+            if (edge_detector.out == 1) {
+                testCase.d = testCase.PPV;
+            }
+            } else {
+                testCase.d = testCase.ERROR_STATE;
+        }
+
+
+        // PPV
+        testCase.PPV:
+        fa.x = PPV_X;
+        fa.y = PPV_Y;
+        fa.op = PPV_ALUFN;
+        //turn on io_led to indicate which case we are on
+        checkoff_reg.d[4] = 1;
+        //wait for the timer
+        // check values
+        flag_reg.d[3] = (fa.z != PPV_Z);
+        flag_reg.d[2] = (fa.v != PPV_V);
+        flag_reg.d[1] = (fa.n != PPV_N);
+        flag_reg.d[0] = (fa.s != PPV_S);
+        s_reg.d = fa.s;
+        if (fa.s == PPV_S & fa.z == PPV_Z & fa.n == PPV_N & fa.v == PPV_V){
+            if (edge_detector.out == 1) {
+                testCase.d = testCase.ERR;
+            }
+            } else {
+                testCase.d = testCase.ERROR_STATE;
+        }
+
+
+        // ERR
+        testCase.ERR:
+        fa.x = ERR_X;
+        fa.y = ERR_Y;
+        fa.op = ERR_ALUFN;
+        //turn on io_led to indicate which case we are on
+        checkoff_reg.d[3] = 1;
+        //wait for the timer
+        // check values
+        flag_reg.d[3] = (fa.z != ERR_Z);
+        flag_reg.d[2] = (fa.v != ERR_V);
+        flag_reg.d[1] = (fa.n != ERR_N);
+        flag_reg.d[0] = (fa.s != ERR_S);
+        s_reg.d = 16hdead;
+        if (fa.s == ERR_S & fa.z == ERR_Z & fa.n == ERR_N & fa.v == ERR_V){
+            if (edge_detector.out == 1) {
+                testCase.d = testCase.ERR;
+            }
+            } else {
+                testCase.d = testCase.ERROR_STATE;
+        }
+      testCase.ERROR_STATE:
+      // we remain in error state until we press button
+      if (edge_detector.out ==1){
+        // if we press the end button we go to the end state 
+        testCase.d = testCase.END;
+        }
+      testCase.END:
+      // turn on all the lights used 
+      // turn the registers we use to all equal 1s bitwise
+      flag_reg.d = 8hff;
+      checkoff_reg.d = 8hff;
+      // write cool on segment leds
+      s_reg.d =16hc001;
+      // output them registers
+      s = s_reg.q;
+      flag = flag_reg.q;
+      checkoff = checkoff_reg.q;
+      //remain in this state until we press the button
+      if (edge_detector.out ==1){
+        testCase.d = testCase.START;
+      }    
+    }
+
+    
+  }
+}

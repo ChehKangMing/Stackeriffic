@@ -1,0 +1,63 @@
+module cu_test (
+    input clk,  // clock
+    input rst,  // reset
+    input button, // progress through each state
+    input selector[8],
+    input updateSpeed,
+    input speedSel[$clog2(5)],
+    output readSpead[$clog2(5)],
+    output out[16],
+    output state_number[16], // display on the middle 4 bank
+    output outledhigh[8],
+    output outledlow[8]
+  ) {
+  // declare modules
+  .clk(clk) {
+    .rst(rst){
+      // register for value to print to segment
+      game_beta beta;
+      matrix_writer matrix_writer;
+    }
+  }
+  always {
+    beta.button = button;
+    out = 16hf001;
+    state_number = beta.statedebug;
+    matrix_writer.row[0]=beta.r1_out[7:0];
+    matrix_writer.row[1]=beta.r2_out[7:0];
+    matrix_writer.row[2]=beta.r3_out[7:0];
+    matrix_writer.row[3]=beta.r4_out[7:0];
+    matrix_writer.row[4]=beta.r5_out[7:0];
+    matrix_writer.row[5]=beta.r6_out[7:0];
+    matrix_writer.row[6]=beta.r7_out[7:0];
+    matrix_writer.row[7]=beta.r8_out[7:0];
+    
+    outledhigh = matrix_writer.outled;
+    outledlow = matrix_writer.outgnd;
+    //pass reg 0 controls
+    beta.updateSpeed = updateSpeed;
+    beta.speedSel = speedSel;
+    readSpead = beta.readSpeed;
+    
+    case(selector){ // we are using the right bank left 4 dips. // case number is the middle bank if leds
+      8h00: out = beta.wdsel_output; // check wdsel 16bit
+      8h01 :out = beta.reg11_current_line_index; // this is the line selector
+      8h02: out = beta.statedebug; // check which state we are in conv to decimal
+      8h03: out = beta.write_addr;  // see if we are writing to the correct address 4bit
+      8h04: out = beta.regfile_read_address_a; // see read address a 4bit
+      8h05: out = beta.regfile_read_address_b; // see read address b 4bit
+      8h06: out = beta.wdselin; // wdsel mux selectors 2 bit
+      8h07: out = beta.we; //1bit
+      8h08: out = beta.asel; //3bit
+      8h09: out = beta.bsel; //3bit
+      8h0A: out = beta.reg9_and_computation; //16bit
+      8h0B: out = beta.reg0_speed_frame_count; //16bit counts up each time we complete 8 lines
+      8h0C: out = beta.read_a_data; //16bit
+      8h0D: out = beta.read_b_data; // 16 bit
+      8h0E: out = beta.alufn;
+      default: out = 16hf001;
+    }
+    
+    
+  }
+}

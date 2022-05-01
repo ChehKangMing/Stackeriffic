@@ -1,0 +1,1189 @@
+module alu_auto (
+    input clk,  // clock
+    input rst,  // reset
+    input button,
+    output alufn[6],
+    output checkoff[8], // is current correct????
+    output flag[4], // output the flags for this error
+    output s[16] // output of sum value, 
+   ) {
+    alu alu;
+    // clock size how many clocks before we get a rise edge
+    const  SLOWCLOCK_SIZE = 27;
+  
+  
+    .clk(clk) {
+    counter slowClock(#SIZE(SLOWCLOCK_SIZE),.rst(rst));      
+      //watching slowClock
+      edge_detector edge_detector(#RISE(1), #FALL(0));
+        // watching button for press
+      edge_detector button_detector(#RISE(1), #FALL(0));
+      .rst(rst) {
+        dff checkoff_reg[8](#INIT(0), .clk(clk), .rst(rst));
+        dff flag_reg[4](#INIT(0), .clk(clk), .rst(rst)); // z v n s
+        dff s_reg[16](#INIT(0), .clk(clk), .rst(rst)); 
+        dff alufn_reg[6](#INIT(0), .clk(clk), .rst(rst)); 
+        fsm testCase(#INIT(START), .clk(clk), .rst(rst)) = {
+        START,
+        ADDSTART,ADD0,ADD1,ADD2,ADD3,
+        SUBSTART,SUB0,SUB1,SUB2,SUB3,
+        MULSTART,MUL0,MUL1,MUL2,MUL3,
+        BOOLSTART,AND,OR,XOR,A,
+        SHLSTART,LS1,LS2,LS4,LS8,
+        SHRSTART,RS1,RS2,RS4,RS8,
+        SRASTART,RSA1,RSA2,RSA4,RSA8,
+        CMPEQSTART,CMPEQ1,CMPEQ2,CMPEQ3,CMPEQ4,CMPLTSTART,        
+        CMPLT1,CMPLT2,CMPLT3,CMPLT4,CMPLESTART,
+        CMPLE1,CMPLE2,CMPLE3,CMPLE4,ERRCASE,ERRCASE1,
+        END,ERROR_STATE,ERROR_STATE1}; 
+      }
+    }
+ 
+  always {
+    alu.op = 0;
+    alu.x = 0;
+    alu.y = 0; 
+
+    checkoff = checkoff_reg.q;
+    flag = flag_reg.q;
+    s = s_reg.q;
+    alufn = alufn_reg.q;
+    
+    button_detector.in = button;
+    edge_detector.in = slowClock.value[SLOWCLOCK_SIZE-1];
+    //edge_detector.in = button;
+    
+case (testCase.q) {
+        testCase.START:
+        flag_reg.d = 8h00;
+        // we want to print something to show that we are in the correct component
+        s_reg.d = 16h57a7;
+        checkoff_reg.d = 16h0000;
+        alufn_reg.d = b000000;
+        // edge_detector sees we have pressed the button
+        if (button_detector.out == 1) { //start auto alu tester
+          testCase.d = testCase.ADDSTART;
+    }
+        
+//***************************ADD***********************
+testCase.ADDSTART:
+flag_reg.d = 8h00;
+// we want to print something to show that we are in the correct component
+s_reg.d = 16hadd0;
+checkoff_reg.d = 16h0000;
+alufn_reg.d=0;
+// edge_detector sees we have pressed the button
+if (edge_detector.out == 1) {
+    testCase.d = testCase.ADD0;
+}
+
+// ADD0
+testCase.ADD0:
+alu.x = 16h5e94;
+alu.y = 16h132f;
+alu.op = b000000;
+//turn on io_led to indicate which case we are on
+checkoff_reg.d[0] = 1;
+// check values
+flag_reg.d[3] = alu.z;
+flag_reg.d[2] = alu.v;
+flag_reg.d[1] = alu.n;
+flag_reg.d[0] = (alu.s != 16h71c3);
+s_reg.d = alu.s;
+alufn_reg.d = b000000;
+if (alu.s == 16h71c3 & alu.z == 0 & alu.n == 0 & alu.v == 0){
+     if (edge_detector.out == 1) {
+         testCase.d = testCase.ADD1;
+     }
+     } else {
+         testCase.d = testCase.ERROR_STATE;
+}
+
+
+// ADD1
+testCase.ADD1:
+alu.x = 16h000f;
+alu.y = 16hffec;
+alu.op = b000000;
+//turn on io_led to indicate which case we are on
+checkoff_reg.d[1] = 1;
+// check values
+flag_reg.d[3] = alu.z;
+flag_reg.d[2] = alu.v;
+flag_reg.d[1] = alu.n;
+flag_reg.d[0] = (alu.s != 16hfffb);
+s_reg.d = alu.s;
+alufn_reg.d = b000000;
+if (alu.s == 16hfffb & alu.z == 0 & alu.n == 1 & alu.v == 0){
+     if (edge_detector.out == 1) {
+         testCase.d = testCase.ADD2;
+     }
+     } else {
+         testCase.d = testCase.ERROR_STATE;
+}
+
+
+// ADD2
+testCase.ADD2:
+alu.x = 0;
+alu.y = 0;
+alu.op = b000000;
+//turn on io_led to indicate which case we are on
+checkoff_reg.d[2] = 1;
+// check values
+flag_reg.d[3] = alu.z;
+flag_reg.d[2] = alu.v;
+flag_reg.d[1] = alu.n;
+flag_reg.d[0] = (alu.s != 0);
+s_reg.d = alu.s;
+alufn_reg.d = b000000;
+if (alu.s == 0 & alu.z == 1 & alu.n == 0 & alu.v == 0){
+     if (edge_detector.out == 1) {
+         testCase.d = testCase.ADD3;
+     }
+     } else {
+         testCase.d = testCase.ERROR_STATE;
+}
+
+
+// ADD3
+testCase.ADD3:
+alu.x = 16h0001;
+alu.y = 16h7FFF;
+alu.op = b000000;
+//turn on io_led to indicate which case we are on
+checkoff_reg.d[3] = 1;
+// check values
+flag_reg.d[3] = alu.z;
+flag_reg.d[2] = alu.v;
+flag_reg.d[1] = alu.n;
+flag_reg.d[0] = (alu.s != 16h8000);
+s_reg.d = alu.s;
+alufn_reg.d = b000000;
+if (alu.s == 16h8000 & alu.z == 0 & alu.n == 1 & alu.v == 1){
+     if (edge_detector.out == 1) {
+         testCase.d = testCase.SUBSTART;
+     }
+     } else {
+         testCase.d = testCase.ERROR_STATE;
+}
+
+
+
+//***************************SUB***********************
+testCase.SUBSTART:
+flag_reg.d = 8h00;
+// we want to print something to show that we are in the correct component
+s_reg.d = 16h50bb;
+checkoff_reg.d = 16h0000;
+alufn_reg.d=0;
+// edge_detector sees we have pressed the button
+if (edge_detector.out == 1) {
+    testCase.d = testCase.SUB0;
+}
+
+// SUB0
+testCase.SUB0:
+alu.x = 16h4f34;
+alu.y = 16h2321;
+alu.op = b000001;
+//turn on io_led to indicate which case we are on
+checkoff_reg.d[0] = 1;
+// check values
+flag_reg.d[3] = alu.z;
+flag_reg.d[2] = alu.v;
+flag_reg.d[1] = alu.n;
+flag_reg.d[0] = (alu.s != 16h2c13);
+s_reg.d = alu.s;
+alufn_reg.d = b000001;
+if (alu.s == 16h2c13 & alu.z == 0 & alu.n == 0 & alu.v == 0){
+     if (edge_detector.out == 1) {
+         testCase.d = testCase.SUB1;
+     }
+     } else {
+         testCase.d = testCase.ERROR_STATE;
+}
+
+
+// SUB1
+testCase.SUB1:
+alu.x = 16hfff0;
+alu.y = 16h0001;
+alu.op = b000001;
+//turn on io_led to indicate which case we are on
+checkoff_reg.d[1] = 1;
+// check values
+flag_reg.d[3] = alu.z;
+flag_reg.d[2] = alu.v;
+flag_reg.d[1] = alu.n;
+flag_reg.d[0] = (alu.s != 16hffef);
+s_reg.d = alu.s;
+alufn_reg.d = b000001;
+if (alu.s == 16hffef & alu.z == 0 & alu.n == 1 & alu.v == 0){
+     if (edge_detector.out == 1) {
+         testCase.d = testCase.SUB2;
+     }
+     } else {
+         testCase.d = testCase.ERROR_STATE;
+}
+
+
+// SUB2
+testCase.SUB2:
+alu.x = 16hc001;
+alu.y = 16hc001;
+alu.op = b000001;
+//turn on io_led to indicate which case we are on
+checkoff_reg.d[2] = 1;
+// check values
+flag_reg.d[3] = alu.z;
+flag_reg.d[2] = alu.v;
+flag_reg.d[1] = alu.n;
+flag_reg.d[0] = (alu.s != 0);
+s_reg.d = alu.s;
+alufn_reg.d = b000001;
+if (alu.s == 0 & alu.z == 1 & alu.n == 0 & alu.v == 0){
+     if (edge_detector.out == 1) {
+         testCase.d = testCase.SUB3;
+     }
+     } else {
+         testCase.d = testCase.ERROR_STATE;
+}
+
+
+// SUB3
+testCase.SUB3:
+alu.x = 16h9f22;
+alu.y = 16h2ff3;
+alu.op = b000001;
+//turn on io_led to indicate which case we are on
+checkoff_reg.d[3] = 1;
+// check values
+flag_reg.d[3] = alu.z;
+flag_reg.d[2] = alu.v;
+flag_reg.d[1] = alu.n;
+flag_reg.d[0] = (alu.s != 16h6f2f);
+s_reg.d = alu.s;
+alufn_reg.d = b000001;
+if (alu.s == 16h6f2f & alu.z == 0 & alu.n == 0 & alu.v == 1){
+     if (edge_detector.out == 1) {
+         testCase.d = testCase.SHLSTART;
+     }
+     } else {
+         testCase.d = testCase.ERROR_STATE;
+}
+
+
+
+//***************************SHL***********************
+testCase.SHLSTART:
+flag_reg.d = 8h00;
+// we want to print something to show that we are in the correct component
+s_reg.d = 16h5f71;
+checkoff_reg.d = 16h0000;
+alufn_reg.d=0;
+// edge_detector sees we have pressed the button
+if (edge_detector.out == 1) {
+    testCase.d = testCase.LS1;
+}
+
+// LS1
+testCase.LS1:
+alu.x = 16hf001;
+alu.y = 16h0001;
+alu.op = b100000;
+//turn on io_led to indicate which case we are on
+checkoff_reg.d[0] = 1;
+// check values
+flag_reg.d[3] = alu.z;
+flag_reg.d[2] = alu.v;
+flag_reg.d[1] = alu.n;
+flag_reg.d[0] = (alu.s != 16he002);
+s_reg.d = alu.s;
+alufn_reg.d = b100000;
+if (alu.s == 16he002){
+     if (edge_detector.out == 1) {
+         testCase.d = testCase.LS2;
+     }
+     } else {
+         testCase.d = testCase.ERROR_STATE;
+}
+
+
+// LS2
+testCase.LS2:
+alu.x = 16hf001;
+alu.y = 16h0002;
+alu.op = b100000;
+//turn on io_led to indicate which case we are on
+checkoff_reg.d[1] = 1;
+// check values
+flag_reg.d[3] = alu.z;
+flag_reg.d[2] = alu.v;
+flag_reg.d[1] = alu.n;
+flag_reg.d[0] = (alu.s != 16hc004);
+s_reg.d = alu.s;
+alufn_reg.d = b100000;
+if (alu.s == 16hc004){
+     if (edge_detector.out == 1) {
+         testCase.d = testCase.LS4;
+     }
+     } else {
+         testCase.d = testCase.ERROR_STATE;
+}
+
+
+// LS4
+testCase.LS4:
+alu.x = 16hf001;
+alu.y = 16h0004;
+alu.op = b100000;
+//turn on io_led to indicate which case we are on
+checkoff_reg.d[2] = 1;
+// check values
+flag_reg.d[3] = alu.z;
+flag_reg.d[2] = alu.v;
+flag_reg.d[1] = alu.n;
+flag_reg.d[0] = (alu.s != 16h0010);
+s_reg.d = alu.s;
+alufn_reg.d = b100000;
+if (alu.s == 16h0010){
+     if (edge_detector.out == 1) {
+         testCase.d = testCase.LS8;
+     }
+     } else {
+         testCase.d = testCase.ERROR_STATE;
+}
+
+
+// LS8
+testCase.LS8:
+alu.x = 16hf001;
+alu.y = 16h0008;
+alu.op = b100000;
+//turn on io_led to indicate which case we are on
+checkoff_reg.d[3] = 1;
+// check values
+flag_reg.d[3] = alu.z;
+flag_reg.d[2] = alu.v;
+flag_reg.d[1] = alu.n;
+flag_reg.d[0] = (alu.s != 16h0100);
+s_reg.d = alu.s;
+alufn_reg.d = b100000;
+if (alu.s == 16h0100){
+     if (edge_detector.out == 1) {
+         testCase.d = testCase.SHRSTART;
+     }
+     } else {
+         testCase.d = testCase.ERROR_STATE;
+}
+
+
+
+//***************************SHR***********************
+testCase.SHRSTART:
+flag_reg.d = 8h00;
+// we want to print something to show that we are in the correct component
+s_reg.d = 16h5f78;
+checkoff_reg.d = 16h0000;
+alufn_reg.d=0;
+// edge_detector sees we have pressed the button
+if (edge_detector.out == 1) {
+    testCase.d = testCase.RS1;
+}
+
+// RS1
+testCase.RS1:
+alu.x = 16hf001;
+alu.y = 16h0001;
+alu.op = b100001;
+//turn on io_led to indicate which case we are on
+checkoff_reg.d[0] = 1;
+// check values
+flag_reg.d[3] = alu.z;
+flag_reg.d[2] = alu.v;
+flag_reg.d[1] = alu.n;
+flag_reg.d[0] = (alu.s != 16h7800);
+s_reg.d = alu.s;
+alufn_reg.d = b100001;
+if (alu.s == 16h7800){
+     if (edge_detector.out == 1) {
+         testCase.d = testCase.RS2;
+     }
+     } else {
+         testCase.d = testCase.ERROR_STATE;
+}
+
+
+// RS2
+testCase.RS2:
+alu.x = 16hf001;
+alu.y = 16h0002;
+alu.op = b100001;
+//turn on io_led to indicate which case we are on
+checkoff_reg.d[1] = 1;
+// check values
+flag_reg.d[3] = alu.z;
+flag_reg.d[2] = alu.v;
+flag_reg.d[1] = alu.n;
+flag_reg.d[0] = (alu.s != 16h3c00);
+s_reg.d = alu.s;
+alufn_reg.d = b100001;
+if (alu.s == 16h3c00){
+     if (edge_detector.out == 1) {
+         testCase.d = testCase.RS4;
+     }
+     } else {
+         testCase.d = testCase.ERROR_STATE;
+}
+
+
+// RS4
+testCase.RS4:
+alu.x = 16hf001;
+alu.y = 16h0004;
+alu.op = b100001;
+//turn on io_led to indicate which case we are on
+checkoff_reg.d[2] = 1;
+// check values
+flag_reg.d[3] = alu.z;
+flag_reg.d[2] = alu.v;
+flag_reg.d[1] = alu.n;
+flag_reg.d[0] = (alu.s != 16h0f00);
+s_reg.d = alu.s;
+alufn_reg.d = b100001;
+if (alu.s == 16h0f00){
+     if (edge_detector.out == 1) {
+         testCase.d = testCase.RS8;
+     }
+     } else {
+         testCase.d = testCase.ERROR_STATE;
+}
+
+
+// RS8
+testCase.RS8:
+alu.x = 16hf001;
+alu.y = 16h0008;
+alu.op = b100001;
+//turn on io_led to indicate which case we are on
+checkoff_reg.d[3] = 1;
+// check values
+flag_reg.d[3] = alu.z;
+flag_reg.d[2] = alu.v;
+flag_reg.d[1] = alu.n;
+flag_reg.d[0] = (alu.s != 16h00f0);
+s_reg.d = alu.s;
+alufn_reg.d = b100001;
+if (alu.s == 16h00f0){
+     if (edge_detector.out == 1) {
+         testCase.d = testCase.SRASTART;
+     }
+     } else {
+         testCase.d = testCase.ERROR_STATE;
+}
+
+
+
+//***************************SRA***********************
+testCase.SRASTART:
+flag_reg.d = 8h00;
+// we want to print something to show that we are in the correct component
+s_reg.d = 16h5f7a;
+checkoff_reg.d = 16h0000;
+alufn_reg.d=0;
+// edge_detector sees we have pressed the button
+if (edge_detector.out == 1) {
+    testCase.d = testCase.RSA1;
+}
+
+// RSA1
+testCase.RSA1:
+alu.x = 16hf001;
+alu.y = 16h0001;
+alu.op = b100011;
+//turn on io_led to indicate which case we are on
+checkoff_reg.d[0] = 1;
+// check values
+flag_reg.d[3] = alu.z;
+flag_reg.d[2] = alu.v;
+flag_reg.d[1] = alu.n;
+flag_reg.d[0] = (alu.s != 16hf800);
+s_reg.d = alu.s;
+alufn_reg.d = b100011;
+if (alu.s == 16hf800){
+     if (edge_detector.out == 1) {
+         testCase.d = testCase.RSA2;
+     }
+     } else {
+         testCase.d = testCase.ERROR_STATE;
+}
+
+
+// RSA2
+testCase.RSA2:
+alu.x = 16hf001;
+alu.y = 16h0002;
+alu.op = b100011;
+//turn on io_led to indicate which case we are on
+checkoff_reg.d[1] = 1;
+// check values
+flag_reg.d[3] = alu.z;
+flag_reg.d[2] = alu.v;
+flag_reg.d[1] = alu.n;
+flag_reg.d[0] = (alu.s != 16hfc00);
+s_reg.d = alu.s;
+alufn_reg.d = b100011;
+if (alu.s == 16hfc00){
+     if (edge_detector.out == 1) {
+         testCase.d = testCase.RSA4;
+     }
+     } else {
+         testCase.d = testCase.ERROR_STATE;
+}
+
+
+// RSA4
+testCase.RSA4:
+alu.x = 16hf001;
+alu.y = 16h0004;
+alu.op = b100011;
+//turn on io_led to indicate which case we are on
+checkoff_reg.d[2] = 1;
+// check values
+flag_reg.d[3] = alu.z;
+flag_reg.d[2] = alu.v;
+flag_reg.d[1] = alu.n;
+flag_reg.d[0] = (alu.s != 16hff00);
+s_reg.d = alu.s;
+alufn_reg.d = b100011;
+if (alu.s == 16hff00){
+     if (edge_detector.out == 1) {
+         testCase.d = testCase.RSA8;
+     }
+     } else {
+         testCase.d = testCase.ERROR_STATE;
+}
+
+
+// RSA8
+testCase.RSA8:
+alu.x = 16hf001;
+alu.y = 16h0008;
+alu.op = b100011;
+//turn on io_led to indicate which case we are on
+checkoff_reg.d[3] = 1;
+// check values
+flag_reg.d[3] = alu.z;
+flag_reg.d[2] = alu.v;
+flag_reg.d[1] = alu.n;
+flag_reg.d[0] = (alu.s != 16hfff0);
+s_reg.d = alu.s;
+alufn_reg.d = b100011;
+if (alu.s == 16hfff0){
+     if (edge_detector.out == 1) {
+         testCase.d = testCase.BOOLSTART;
+     }
+     } else {
+         testCase.d = testCase.ERROR_STATE;
+}
+
+
+
+//***************************BOOL***********************
+testCase.BOOLSTART:
+flag_reg.d = 8h00;
+// we want to print something to show that we are in the correct component
+s_reg.d = 16hB001;
+checkoff_reg.d = 16h0000;
+alufn_reg.d=0;
+// edge_detector sees we have pressed the button
+if (edge_detector.out == 1) {
+    testCase.d = testCase.AND;
+}
+
+// AND
+testCase.AND:
+alu.x = 16b0110100001010111;
+alu.y = 16b1010110000001000;
+alu.op = 8;
+//turn on io_led to indicate which case we are on
+checkoff_reg.d[0] = 1;
+// check values
+flag_reg.d[3] = alu.z;
+flag_reg.d[2] = alu.v;
+flag_reg.d[1] = alu.n;
+flag_reg.d[0] = (alu.s != 16h2800);
+s_reg.d = alu.s;
+alufn_reg.d = 8;
+if (alu.s == 16h2800){
+     if (edge_detector.out == 1) {
+         testCase.d = testCase.OR;
+     }
+     } else {
+         testCase.d = testCase.ERROR_STATE;
+}
+
+
+// OR
+testCase.OR:
+alu.x = 16b0110100001010111;
+alu.y = 16b1010110000001000;
+alu.op = 14;
+//turn on io_led to indicate which case we are on
+checkoff_reg.d[1] = 1;
+// check values
+flag_reg.d[3] = alu.z;
+flag_reg.d[2] = alu.v;
+flag_reg.d[1] = alu.n;
+flag_reg.d[0] = (alu.s != 16hec5f);
+s_reg.d = alu.s;
+alufn_reg.d = 14;
+if (alu.s == 16hec5f){
+     if (edge_detector.out == 1) {
+         testCase.d = testCase.XOR;
+     }
+     } else {
+         testCase.d = testCase.ERROR_STATE;
+}
+
+
+// XOR
+testCase.XOR:
+alu.x = 16b0110100001010111;
+alu.y = 16b1010110000001000;
+alu.op = 6;
+//turn on io_led to indicate which case we are on
+checkoff_reg.d[2] = 1;
+// check values
+flag_reg.d[3] = alu.z;
+flag_reg.d[2] = alu.v;
+flag_reg.d[1] = alu.n;
+flag_reg.d[0] = (alu.s != 16hc45f);
+s_reg.d = alu.s;
+alufn_reg.d = 6;
+if (alu.s == 16hc45f){
+     if (edge_detector.out == 1) {
+         testCase.d = testCase.A;
+     }
+     } else {
+         testCase.d = testCase.ERROR_STATE;
+}
+
+
+// A
+testCase.A:
+alu.x = 16b0110100001010111;
+alu.y = 16b1010110000001000;
+alu.op = 10;
+//turn on io_led to indicate which case we are on
+checkoff_reg.d[3] = 1;
+// check values
+flag_reg.d[3] = alu.z;
+flag_reg.d[2] = alu.v;
+flag_reg.d[1] = alu.n;
+flag_reg.d[0] = (alu.s != 16h6857);
+s_reg.d = alu.s;
+alufn_reg.d = 10;
+if (alu.s == 16h6857){
+     if (edge_detector.out == 1) {
+         testCase.d = testCase.CMPEQSTART;
+     }
+     } else {
+         testCase.d = testCase.ERROR_STATE;
+}
+
+
+
+//***************************CMPEQ***********************
+testCase.CMPEQSTART:
+flag_reg.d = 8h00;
+// we want to print something to show that we are in the correct component
+
+s_reg.d = 16hc01e;
+checkoff_reg.d = 16h0000;
+alufn_reg.d=0;
+// edge_detector sees we have pressed the button
+if (edge_detector.out == 1) {
+    testCase.d = testCase.CMPEQ1;
+}
+
+// CMPEQ1
+testCase.CMPEQ1:
+alu.x = 16h0010;
+alu.y = 16h0010;
+alu.op = b110011;
+//turn on io_led to indicate which case we are on
+checkoff_reg.d[0] = 1;
+// check values
+flag_reg.d[3] = alu.z;
+flag_reg.d[2] = alu.v;
+flag_reg.d[1] = alu.n;
+flag_reg.d[0] = (alu.s != 16h001);
+s_reg.d = alu.s;
+alufn_reg.d = b110011;
+if (alu.s == 16h001){
+     if (edge_detector.out == 1) {
+         testCase.d = testCase.CMPEQ2;
+     }
+     } else {
+         testCase.d = testCase.ERROR_STATE;
+}
+
+
+// CMPEQ2
+testCase.CMPEQ2:
+alu.x = 16h0010;
+alu.y = 16hffff;
+alu.op = b110011;
+//turn on io_led to indicate which case we are on
+checkoff_reg.d[1] = 1;
+// check values
+flag_reg.d[3] = alu.z;
+flag_reg.d[2] = alu.v;
+flag_reg.d[1] = alu.n;
+flag_reg.d[0] = (alu.s != 16h0000);
+s_reg.d = alu.s;
+alufn_reg.d = b110011;
+if (alu.s == 16h0000){
+     if (edge_detector.out == 1) {
+         testCase.d = testCase.CMPEQ3;
+     }
+     } else {
+         testCase.d = testCase.ERROR_STATE;
+}
+
+
+// CMPEQ3
+testCase.CMPEQ3:
+alu.x = 16h0010;
+alu.y = 16h7000;
+alu.op = b110011;
+//turn on io_led to indicate which case we are on
+checkoff_reg.d[2] = 1;
+// check values
+flag_reg.d[3] = alu.z;
+flag_reg.d[2] = alu.v;
+flag_reg.d[1] = alu.n;
+flag_reg.d[0] = (alu.s != 16h0000);
+s_reg.d = alu.s;
+alufn_reg.d = b110011;
+if (alu.s == 16h0000){
+     if (edge_detector.out == 1) {
+         testCase.d = testCase.CMPEQ4;
+     }
+     } else {
+         testCase.d = testCase.ERROR_STATE;
+}
+
+
+// CMPEQ4
+testCase.CMPEQ4:
+alu.x = 16hf001;
+alu.y = 16hf001;
+alu.op = b110011;
+//turn on io_led to indicate which case we are on
+checkoff_reg.d[3] = 1;
+// check values
+flag_reg.d[3] = alu.z;
+flag_reg.d[2] = alu.v;
+flag_reg.d[1] = alu.n;
+flag_reg.d[0] = (alu.s != 16h0001);
+s_reg.d = alu.s;
+alufn_reg.d = b110011;
+if (alu.s == 16h0001){
+     if (edge_detector.out == 1) {
+         testCase.d = testCase.CMPLTSTART;
+     }
+     } else {
+         testCase.d = testCase.ERROR_STATE;
+}
+
+
+
+//***************************CMPLT***********************
+testCase.CMPLTSTART:
+flag_reg.d = 8h00;
+// we want to print something to show that we are in the correct component
+
+s_reg.d = 16hc017;
+checkoff_reg.d = 16h0000;
+alufn_reg.d=0;
+// edge_detector sees we have pressed the button
+if (edge_detector.out == 1) {
+    testCase.d = testCase.CMPLT1;
+}
+
+// CMPLT1
+testCase.CMPLT1:
+alu.x = 16h0010;
+alu.y = 16h0010;
+alu.op = b110101;
+//turn on io_led to indicate which case we are on
+checkoff_reg.d[0] = 1;
+// check values
+flag_reg.d[3] = alu.z;
+flag_reg.d[2] = alu.v;
+flag_reg.d[1] = alu.n;
+flag_reg.d[0] = (alu.s != 16h0000);
+s_reg.d = alu.s;
+alufn_reg.d = b110101;
+if (alu.s == 16h0000){
+     if (edge_detector.out == 1) {
+         testCase.d = testCase.CMPLT2;
+     }
+     } else {
+         testCase.d = testCase.ERROR_STATE;
+}
+
+
+// CMPLT2
+testCase.CMPLT2:
+alu.x = 16h0010;
+alu.y = 16hffff;
+alu.op = b110101;
+//turn on io_led to indicate which case we are on
+checkoff_reg.d[1] = 1;
+// check values
+flag_reg.d[3] = alu.z;
+flag_reg.d[2] = alu.v;
+flag_reg.d[1] = alu.n;
+flag_reg.d[0] = (alu.s != 16h0000);
+s_reg.d = alu.s;
+alufn_reg.d = b110101;
+if (alu.s == 16h0000){
+     if (edge_detector.out == 1) {
+         testCase.d = testCase.CMPLT3;
+     }
+     } else {
+         testCase.d = testCase.ERROR_STATE;
+}
+
+
+// CMPLT3
+testCase.CMPLT3:
+alu.x = 16h0010;
+alu.y = 16h7000;
+alu.op = b110101;
+//turn on io_led to indicate which case we are on
+checkoff_reg.d[2] = 1;
+// check values
+flag_reg.d[3] = alu.z;
+flag_reg.d[2] = alu.v;
+flag_reg.d[1] = alu.n;
+flag_reg.d[0] = (alu.s != 16h0001);
+s_reg.d = alu.s;
+alufn_reg.d = b110101;
+if (alu.s == 16h0001){
+     if (edge_detector.out == 1) {
+         testCase.d = testCase.CMPLT4;
+     }
+     } else {
+         testCase.d = testCase.ERROR_STATE;
+}
+
+
+// CMPLT4
+testCase.CMPLT4:
+alu.x = 16h0010;
+alu.y = 16hf001;
+alu.op = b110101;
+//turn on io_led to indicate which case we are on
+checkoff_reg.d[3] = 1;
+// check values
+flag_reg.d[3] = alu.z;
+flag_reg.d[2] = alu.v;
+flag_reg.d[1] = alu.n;
+flag_reg.d[0] = (alu.s != 16h0000);
+s_reg.d = alu.s;
+alufn_reg.d = b110101;
+if (alu.s == 16h0000){
+     if (edge_detector.out == 1) {
+         testCase.d = testCase.CMPLESTART;
+     }
+     } else {
+         testCase.d = testCase.ERROR_STATE;
+}
+
+
+
+//***************************CMPLE***********************
+testCase.CMPLESTART:
+flag_reg.d = 8h00;
+// we want to print something to show that we are in the correct component
+
+s_reg.d = 16hc01e;
+checkoff_reg.d = 16h0000;
+alufn_reg.d=0;
+// edge_detector sees we have pressed the button
+if (edge_detector.out == 1) {
+    testCase.d = testCase.CMPLE1;
+}
+
+// CMPLE1
+testCase.CMPLE1:
+alu.x = 16h0010;
+alu.y = 16h0010;
+alu.op = b110111;
+//turn on io_led to indicate which case we are on
+checkoff_reg.d[0] = 1;
+// check values
+flag_reg.d[3] = alu.z;
+flag_reg.d[2] = alu.v;
+flag_reg.d[1] = alu.n;
+flag_reg.d[0] = (alu.s != 16h0001);
+s_reg.d = alu.s;
+alufn_reg.d = b110111;
+if (alu.s == 16h0001){
+     if (edge_detector.out == 1) {
+         testCase.d = testCase.CMPLE2;
+     }
+     } else {
+         testCase.d = testCase.ERROR_STATE;
+}
+
+
+// CMPLE2
+testCase.CMPLE2:
+alu.x = 16h0010;
+alu.y = 16hffff;
+alu.op = b110111;
+//turn on io_led to indicate which case we are on
+checkoff_reg.d[1] = 1;
+// check values
+flag_reg.d[3] = alu.z;
+flag_reg.d[2] = alu.v;
+flag_reg.d[1] = alu.n;
+flag_reg.d[0] = (alu.s != 16h0000);
+s_reg.d = alu.s;
+alufn_reg.d = b110111;
+if (alu.s == 16h0000){
+     if (edge_detector.out == 1) {
+         testCase.d = testCase.CMPLE3;
+     }
+     } else {
+         testCase.d = testCase.ERROR_STATE;
+}
+
+
+// CMPLE3
+testCase.CMPLE3:
+alu.x = 16h0010;
+alu.y = 16h7000;
+alu.op = b110111;
+//turn on io_led to indicate which case we are on
+checkoff_reg.d[2] = 1;
+// check values
+flag_reg.d[3] = alu.z;
+flag_reg.d[2] = alu.v;
+flag_reg.d[1] = alu.n;
+flag_reg.d[0] = (alu.s != 16h0001);
+s_reg.d = alu.s;
+alufn_reg.d = b110111;
+if (alu.s == 16h0001){
+     if (edge_detector.out == 1) {
+         testCase.d = testCase.CMPLE4;
+     }
+     } else {
+         testCase.d = testCase.ERROR_STATE;
+}
+
+
+// CMPLE4
+testCase.CMPLE4:
+alu.x = 16hf001;
+alu.y = 16hf001;
+alu.op = b110111;
+//turn on io_led to indicate which case we are on
+checkoff_reg.d[3] = 1;
+// check values
+flag_reg.d[3] = alu.z;
+flag_reg.d[2] = alu.v;
+flag_reg.d[1] = alu.n;
+flag_reg.d[0] = (alu.s != 16h0001);
+s_reg.d = alu.s;
+alufn_reg.d = b110111;
+if (alu.s == 16h0001){
+     if (edge_detector.out == 1) {
+         testCase.d = testCase.MULSTART;
+     }
+     } else {
+         testCase.d = testCase.ERROR_STATE;
+}
+
+//***************************MUL***********************
+testCase.MULSTART:
+flag_reg.d = 8h00;
+// we want to print something to show that we are in the correct component
+s_reg.d = 16h8888;
+checkoff_reg.d = 16h0000;
+alufn_reg.d=0;
+// edge_detector sees we have pressed the button
+if (edge_detector.out == 1) {
+    testCase.d = testCase.MUL0;
+}
+
+// MUL0
+testCase.MUL0:
+alu.x = 16h0005;
+alu.y = 16h0000;
+alu.op = b000010;                
+alufn_reg.d = b000010;
+//turn on io_led to indicate which case we are on
+checkoff_reg.d[0] = 1;
+// check values
+flag_reg.d[3] = alu.z;
+flag_reg.d[2] = alu.v;
+flag_reg.d[1] = alu.n;
+flag_reg.d[0] = (alu.s != 16h0000);
+s_reg.d = alu.s;
+alufn_reg.d = b000010;
+if (alu.s == 16h0000){
+     if (edge_detector.out == 1) {
+         testCase.d = testCase.MUL1;
+     }
+     } else {
+         testCase.d = testCase.ERROR_STATE;
+}
+
+
+// MUL1
+testCase.MUL1:
+alu.x = 16h0005;
+alu.y = 16h0005;
+alu.op = b000010;                
+alufn_reg.d = b000010;
+//turn on io_led to indicate which case we are on
+checkoff_reg.d[1] = 1;
+// check values
+flag_reg.d[3] = alu.z;
+flag_reg.d[2] = alu.v;
+flag_reg.d[1] = alu.n;
+flag_reg.d[0] = (alu.s != 16h0019);
+s_reg.d = alu.s;
+alufn_reg.d = b000010;
+if (alu.s == 16h0019){
+     if (edge_detector.out == 1) {
+         testCase.d = testCase.MUL2;
+     }
+     } else {
+         testCase.d = testCase.ERROR_STATE;
+}
+
+
+// MUL2
+testCase.MUL2:
+alu.x = 16h0005;
+alu.y = 16hffff;
+alu.op = b000010;        
+alufn_reg.d = b000010;
+//turn on io_led to indicate which case we are on
+checkoff_reg.d[2] = 1;
+// check values
+flag_reg.d[3] = alu.z;
+flag_reg.d[2] = alu.v;
+flag_reg.d[1] = alu.n;
+flag_reg.d[0] = (alu.s != 16hfffb);
+s_reg.d = alu.s;
+alufn_reg.d = b000010;
+if (alu.s == 16hfffb){
+     if (edge_detector.out == 1) {
+         testCase.d = testCase.MUL3;
+     }
+     } else {
+         testCase.d = testCase.ERROR_STATE;
+}
+
+
+// MUL3
+testCase.MUL3:
+alu.x = 16hffff;
+alu.y = 16hfff0;
+alu.op = b000010;                
+alufn_reg.d = b000010;
+//turn on io_led to indicate which case we are on
+checkoff_reg.d[3] = 1;
+// check values
+flag_reg.d[3] = alu.z;
+flag_reg.d[2] = alu.v;
+flag_reg.d[1] = alu.n;
+flag_reg.d[0] = (alu.s != 16h0010);
+s_reg.d = alu.s;
+alufn_reg.d = b000010;
+if (alu.s == 16h0010){
+     if (edge_detector.out == 1) {
+         testCase.d = testCase.ERRCASE;
+     }
+     } else {
+         testCase.d = testCase.ERROR_STATE;
+}
+
+//***************************ERRCASE***********************
+testCase.ERRCASE:
+alu.x = 16h0005;
+alu.y = 16h0000;
+alu.op = b111110;
+//turn on io_led to indicate which case we are on
+checkoff_reg.d[3] = 1;
+// check values
+flag_reg.d[3] = alu.z;
+flag_reg.d[2] = alu.v;
+flag_reg.d[1] = alu.n;
+flag_reg.d[0] = (alu.s != 16h0010);
+s_reg.d = alu.s;
+alufn_reg.d = b000010;
+if (alu.s == 16h0010){
+     if (edge_detector.out == 1) {
+         testCase.d = testCase.ERRCASE1;
+     }
+     } else {
+         testCase.d = testCase.ERROR_STATE1;
+}
+testCase.ERRCASE1:
+alu.x = 16h0005;
+alu.y = 16h0000;
+alu.op = b000010;
+//turn on io_led to indicate which case we are on
+checkoff_reg.d[3] = 1;
+// check values
+flag_reg.d[3] = alu.z;
+flag_reg.d[2] = alu.v;
+flag_reg.d[1] = alu.n;
+flag_reg.d[0] = (alu.s != 16h0010);
+s_reg.d = alu.s;
+alufn_reg.d = b000010;
+if (alu.s == 16h0010){
+     if (edge_detector.out == 1) {
+         testCase.d = testCase.END;
+     }
+     } else {
+         testCase.d = testCase.ERROR_STATE;
+}
+
+
+        
+      //*********************************FINISHED********************************************//
+ 
+      testCase.END:
+      flag_reg.d = 8hff;
+      checkoff_reg.d = 8hff;
+      s_reg.d =16hc001;
+      alufn_reg.d = b111111;
+      s = s_reg.q;
+      flag = flag_reg.q;
+      checkoff = checkoff_reg.q;
+        if (edge_detector.out == 1) { 
+          testCase.d = testCase.START; //restart
+  }       
+        
+        //*********************************ERROR STATE********************************************//
+
+      testCase.ERROR_STATE1:
+        if (button_detector.out == 1) { 
+          testCase.d = testCase.ERRCASE1;
+    }        
+      testCase.ERROR_STATE:
+        if (button_detector.out == 1) { 
+          testCase.d = testCase.END;
+    }
+}   

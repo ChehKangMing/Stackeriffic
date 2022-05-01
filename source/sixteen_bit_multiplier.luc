@@ -1,0 +1,13 @@
+module sixteen_bit_multiplier (
+  input x[16],
+  input y[16],
+  output p[16]
+  )
+
+{
+  always{
+  
+    p = x * y;
+    
+    }    
+  }

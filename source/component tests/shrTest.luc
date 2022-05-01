@@ -1,0 +1,218 @@
+module shrTest (
+    input clk,  // clock
+    input rst,  // reset
+    input button,
+    output out[16],
+    output checkoff[8], 
+    output flag[1], // output the flags for this error
+    output s[16] // output of sum value, 
+   ) {
+      // declare modules and constants 
+      shifter16 shift;
+    .clk(clk) {
+      edge_detector edge_detector(#RISE(1), #FALL(0));
+      .rst(rst) {
+        // register to show which test case we are on. 
+        // lit nth bit starting from the left, means we are currently at nth case
+        // output to the right bakn of leds
+        dff checkoff_reg[8](#INIT(0), .clk(clk), .rst(rst));
+        // error state is s correct?
+        // output to the middle bank of leds,
+        dff flag_reg[1](#INIT(0), .clk(clk), .rst(rst));
+        // error s 
+        dff s_reg[16](#INIT(0), .clk(clk), .rst(rst));
+        // we move to the next state by pressing the centre io button
+        // in each state we do the calculation and then print the result to the segment display
+        // when catching a error, i.e the err state, we go immediately to error state
+        // in error state we can return to start state by pressing centre io button
+        // in error state, print the error state z v n s values that are wrong in the the middle led bank
+        // pressing the left button jumps to end state so we can demonstrate how 
+        fsm testCase(#INIT(START), .clk(clk), .rst(rst)) = {START,RS1,RS2,RS4,RS8,ERR00,END,ERROR_STATE};
+      }
+    }
+
+    // constants test conditions
+    // RS1
+    const RS1_X = 16hf001;    
+    const RS1_ALUFN = b100001;
+    const RS1_Y = 16h0001;    
+    const RS1_S = 16h7800;    
+
+
+    // RS2
+    const RS2_X = 16hf001;    
+    const RS2_ALUFN = b100001;
+    const RS2_Y = 16h0002;
+    const RS2_S = 16h3c00;
+
+
+    // RS4
+    const RS4_X = 16hf001;
+    const RS4_ALUFN = b100001;
+    const RS4_Y = 16h0004;
+    const RS4_S = 16h0f00;
+
+
+    // RS8
+    const RS8_X = 16hf001;
+    const RS8_ALUFN = b100001;
+    const RS8_Y = 16h0008;
+    const RS8_S = 16h00f0;
+
+    // ERR00
+    const ERR00_X = 16hf001;
+    const ERR00_ALUFN = b100001;
+    const ERR00_Y = 16h0008;
+    const ERR00_S = 16h0000;
+   
+    
+
+ always {
+    // q is out and d is input for dff 
+    // default outputs
+    checkoff = checkoff_reg.q;
+    flag = flag_reg.q;
+    s = s_reg.q;
+    out = s_reg.q;
+    
+    // default inputs
+    shift.x = 0;
+    shift.y = 0; 
+    shift.op = 0;
+
+    edge_detector.in = button;
+
+
+    //declare fsm
+    case (testCase.q) {
+        testCase.START:
+        flag_reg.d = 8h00;
+        s_reg.d = 16h5f78;
+        checkoff_reg.d = 16h0000;
+        if (edge_detector.out == 1) {
+          testCase.d = testCase.RS1;
+        }
+
+         // RS1
+        testCase.RS1:
+        shift.x = RS1_X;
+        shift.y = RS1_Y;
+        shift.op = RS1_ALUFN;
+        //turn on io_led to indicate which case we are on        
+        checkoff_reg.d[7] = 1;
+        //wait for the timer
+        // check values
+        flag_reg.d[0] = (shift.s != RS1_S);
+        s_reg.d = shift.s;
+        if (shift.s == RS1_S){
+            if (edge_detector.out == 1) {
+                testCase.d = testCase.RS2;
+            }
+            } else {
+                testCase.d = testCase.ERROR_STATE;
+        }
+
+
+        // RS2
+        testCase.RS2:
+        shift.x = RS2_X;
+        shift.y = RS2_Y;
+        shift.op = RS2_ALUFN;
+        //turn on io_led to indicate which case we are on        
+        checkoff_reg.d[6] = 1;
+        //wait for the timer
+        // check values
+        flag_reg.d[0] = (shift.s != RS2_S);
+        s_reg.d = shift.s;
+        if (shift.s == RS2_S){
+            if (edge_detector.out == 1) {
+                testCase.d = testCase.RS4;
+            }
+            } else {
+                testCase.d = testCase.ERROR_STATE;
+        }
+
+
+        // RS4
+        testCase.RS4:
+        shift.x = RS4_X;
+        shift.y = RS4_Y;
+        shift.op = RS4_ALUFN;
+        //turn on io_led to indicate which case we are on        
+        checkoff_reg.d[5] = 1;
+        //wait for the timer
+        // check values
+        flag_reg.d[0] = (shift.s != RS4_S);
+        s_reg.d = shift.s;
+        if (shift.s == RS4_S){
+            if (edge_detector.out == 1) {
+                testCase.d = testCase.RS8;
+            }
+            } else {
+                testCase.d = testCase.ERROR_STATE;
+        }
+
+
+        // RS8
+        testCase.RS8:
+        shift.x = RS8_X;
+        shift.y = RS8_Y;
+        shift.op = RS8_ALUFN;
+        //turn on io_led to indicate which case we are on        
+        checkoff_reg.d[4] = 1;
+        //wait for the timer
+        // check values
+        flag_reg.d[0] = (shift.s != RS8_S);
+        s_reg.d = shift.s;
+        if (shift.s == RS8_S){
+            if (edge_detector.out == 1) {
+                testCase.d = testCase.ERR00;
+            }
+            } else {
+                testCase.d = testCase.ERROR_STATE;
+        }
+
+        // ERR00
+        testCase.ERR00:
+        shift.x = ERR00_X;
+        shift.y = ERR00_Y;
+        shift.op = ERR00_ALUFN;
+        //turn on io_led to indicate which case we are on        
+        checkoff_reg.d[3] = 1;
+        //wait for the timer
+        // check values
+        flag_reg.d[0] = (shift.s != ERR00_S);
+        s_reg.d = 16hdead;
+        if (shift.s == ERR00_S){
+            if (edge_detector.out == 1) {
+                testCase.d = testCase.END;
+            }
+            } else {
+                testCase.d = testCase.ERROR_STATE;
+        }
+      testCase.ERROR_STATE:
+      // we remain in error state until we press button
+      if (edge_detector.out ==1){
+        // if we press the end button we go to the end state 
+        testCase.d = testCase.END;
+        }
+      testCase.END:
+      // turn on all the lights used 
+      // turn the registers we use to all equal 1s bitwise
+      flag_reg.d = 1;
+      checkoff_reg.d = 8hff;
+      // write cool on segment leds
+      s_reg.d =16hc001;
+      // output them registers
+      s = s_reg.q;
+      flag = flag_reg.q;
+      checkoff = checkoff_reg.q;
+      //remain in this state until we press the button
+      if (edge_detector.out ==1){
+        testCase.d = testCase.START;
+      }    
+    }
+
+    
+  }
+}

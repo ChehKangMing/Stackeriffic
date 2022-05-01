@@ -1,0 +1,56 @@
+module alu_manual (
+    input clk,  // clock
+    input rst,  // reset
+    input abutton,
+    input bbutton,
+    input alufn[6],
+    input value[16],
+    output zvn[3],
+    output s[16]
+  ) {
+    alu alu;               
+    // declare modules
+   .clk(clk) {
+   edge_detector a_detector(#RISE(1), #FALL(0));
+   edge_detector b_detector(#RISE(1), #FALL(0));
+    // this module checks if we are pressing io buttons
+    .rst(rst){
+      // declare our module to address the segment         
+        dff store_a[16](#INIT(0),.clk(clk), .rst(rst));  // to store value a
+        dff store_b[16](#INIT(0),.clk(clk), .rst(rst));  // to store value b             
+        dff store_alufn[6](#INIT(0),.clk(clk), .rst(rst));  // to store value alufn 
+        dff store_s[16](#INIT(0),.clk(clk), .rst(rst)); 
+        dff store_zvn[3](#INIT(0),.clk(clk), .rst(rst)); 
+      // declare our test module
+    }
+  }
+    always {
+    a_detector.in = abutton;
+    b_detector.in = bbutton;
+    //  always read the registers
+    alu.x = store_a.q;
+    alu.y = store_b.q;
+    alu.op = store_alufn.q;
+    // always load s into its register
+    store_s.d = alu.s;
+    // load flag register
+    store_zvn.d[2] = alu.z;
+    store_zvn.d[1] = alu.v;
+    store_zvn.d[0] = alu.n;
+    // set outputs
+    zvn = store_zvn.q;
+    s = store_s.q;
+    
+    
+    // always load left dip into the alufn reg
+    store_alufn.d = alufn;
+    
+    // load the dip input into according registers 
+    if (a_detector.out == 1){
+       store_a.d = value;
+    }
+    if (b_detector.out == 1){
+       store_b.d = value;
+    }    
+      }
+}

@@ -1,0 +1,145 @@
+module booleantest (
+    input clk,  // clock
+    input rst,  // reset_conditioner
+    input button,
+    // out is to show input1 input2 input3
+    output s[16],
+    output checkoff[6],
+    output flag[1]
+  ) {  
+        boolean boolean;
+
+  .clk(clk) {
+    edge_detector edge_detector(#RISE(1), #FALL(0));
+      .rst(rst) {
+      dff checkoff_reg[6](#INIT(0), .clk(clk), .rst(rst));
+      dff flag_reg[1](#INIT(0), .clk(clk), .rst(rst));
+      dff s_reg[16](#INIT(0), .clk(clk), .rst(rst));
+        fsm state = {START, AND, OR, XOR, A, PASS, ERRCASE, ERR};
+    }
+  }
+  
+  // input/output for checking cases
+  const A1 = 16b0110100001010111; //16h6857
+  const B1 = 16b1010110000001000; //16hAC08
+
+  always {
+    s = s_reg.q;
+    boolean.a = 0;
+    boolean.b = 0;
+    boolean.op = 0;
+    checkoff = checkoff_reg.q;
+    flag = flag_reg.q;
+    s = s_reg.q;
+    
+    
+    edge_detector.in = button;
+    
+    //declare fsm
+    case(state.q) {
+      state.START:
+      flag_reg.d = 0;
+      s_reg.d = 16hb001;
+      checkoff_reg.d = 0;
+      if (edge_detector.out == 1){
+        state.d = state.AND;
+      }
+state.AND:
+boolean.a = A1;
+boolean.b = B1;
+boolean.op = 8;
+s_reg.d = boolean.s;
+checkoff_reg.d[5] = 1;
+flag_reg.d[0] = ( s_reg.q != 16h2800);
+if (boolean.s == 16h2800) {
+     if (edge_detector.out == 1){     
+     state.d = state.OR;
+     }
+} else {
+     state.d = state.ERR;
+}
+
+
+state.OR:
+boolean.a = A1;
+boolean.b = B1;
+boolean.op = 14;
+s_reg.d = boolean.s;
+checkoff_reg.d[4] = 1;
+flag_reg.d[0] = ( s_reg.q != 16hec5f);
+if (boolean.s == 16hec5f) {
+     if (edge_detector.out == 1){     
+     state.d = state.XOR;
+     }
+} else {
+     state.d = state.ERR;
+}
+
+
+state.XOR:
+boolean.a = A1;
+boolean.b = B1;
+boolean.op = 6;
+s_reg.d = boolean.s;
+checkoff_reg.d[3] = 1;
+flag_reg.d[0] = ( s_reg.q != 16hc45f);
+if (boolean.s == 16hc45f) {
+     if (edge_detector.out == 1){
+     state.d = state.A;
+     }
+} else {
+     state.d = state.ERR;
+}
+
+
+state.A:
+boolean.a = A1;
+boolean.b = B1;
+boolean.op = 10;
+s_reg.d = boolean.s;
+checkoff_reg.d[2] = 1;
+flag_reg.d[0] = ( s_reg.q != 16h6857);
+if (boolean.s == 16h6857) {
+     if (edge_detector.out == 1){
+     state.d = state.ERRCASE;
+     }
+} else {
+     state.d = state.ERR;
+}
+
+
+state.ERRCASE:
+boolean.a = A1;
+boolean.b = B1;
+boolean.op = 10;
+s_reg.d = 16hdead;
+checkoff_reg.d[1] = 1;
+flag_reg.d[0] = ( s_reg.q != 16h6857);
+if (boolean.s == 16h6857) {
+     if (edge_detector.out == 1){
+     state.d = state.PASS;
+     }
+} else {
+     state.d = state.ERR;
+}
+
+
+
+      state.PASS:
+      flag_reg.d = 8hff;    
+      checkoff_reg.d = 8hff; 
+      s_reg.d = 16hc001;
+      flag_reg.d[0] = 0;
+
+      if (edge_detector.out == 1){
+        state.d = state.START;
+      }
+
+      state.ERR:
+      if (edge_detector.out == 1){
+        state.d = state.PASS;
+      }
+}
+       
+      
+      

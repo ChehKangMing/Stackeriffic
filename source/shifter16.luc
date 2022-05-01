@@ -1,0 +1,18 @@
+module shifter16 (
+    input x[16],
+    input y[16],
+    input op[6],
+    output s[16]
+  ) {
+always {
+    s = x;
+  // x is our number to shift 
+  // y[3:0] is used to select our shifter 
+  // select which shifter with op[1:0]  
+  case (op[1:0]){
+      0: s = x << y[3-:4]; // 3-:from 3 to 0, :4 means we are looping 4 times
+      1: s = x >> y[3-:4];
+      3: s = $signed(x) >>> y[3-:4];
+  }
+  
+}
